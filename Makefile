@@ -1,5 +1,5 @@
 index.html: talk.md
-	python refreeze/freee.py
+	python refreeze/freeze.py
 
 RANDOM_PORT=`python -c 'import random; print int(5000+ 5000*random.random())'`
 
