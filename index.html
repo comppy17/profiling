@@ -407,12 +407,11 @@ The steps are:
 * Decorate the function you want to time with the `@profile` decorator
 
 ```python
-#hello.py
 @profile
-def hello()
+def hello():
     print &#34;Hello&#34;
-
-hello()
+    sleep(3)
+    print &#34;Goodbye&#34;
 ```
 --
 * Execute the script with the `kernprof` script
