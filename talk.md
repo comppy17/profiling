@@ -1,6 +1,11 @@
 <script type="text/javascript"
   src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
+<!--
+>>> import numpy as np
+>>> np.random.seed(0)
+
+-->
 # Introduction to profiling
 
 ## Olav Vahtras
@@ -24,13 +29,14 @@ As python programs can be potentially slow it is important to be able to identif
 * Get ``N`` from packed dimension ``N(N+1)/2``
 
 ```
-    def get_square_dim(sp):
-        from math import sqrt
-        nn, = sp.shape
-        # nn = n(n+1)/2 -> n = -1/2 + sqrt(1/4 + 2*nn)
-        n = int(round(-0.5 + sqrt(0.25 + 2*nn)))
-        # allocate a square matrix and fill elements
-        return n
+>>> def get_square_dim(sp):
+...     from math import sqrt
+...     nn, = sp.shape
+...     # nn = n(n+1)/2 -> n = -1/2 + sqrt(1/4 + 2*nn)
+...     n = int(round(-0.5 + sqrt(0.25 + 2*nn)))
+...     # allocate a square matrix and fill elements
+...     return n
+
 ```
 ---
 
@@ -38,16 +44,17 @@ As python programs can be potentially slow it is important to be able to identif
 
 
 ```
-    def unpack(n, sp):
-        sq = numpy.zeros((n, n))
-        ij = 0
-        for i in range(n):
-            for j in range(i):
-                sq[i, j] = sq[j, i] = sp[ij]
-                ij += 1
-            sq[i, i] = sp[ij]
-            ij += 1
-        return sq
+>>> def unpack(n, sp):
+...     sq = np.zeros((n, n))
+...     ij = 0
+...     for i in range(n):
+...         for j in range(i):
+...             sq[i, j] = sq[j, i] = sp[ij]
+...             ij += 1
+...         sq[i, i] = sp[ij]
+...         ij += 1
+...     return sq
+
 ```    
 
 ---
@@ -55,24 +62,27 @@ As python programs can be potentially slow it is important to be able to identif
 
 
 ```
-    def main(sp):
-        n = get_square_dim(sp)
-        sq = unpack(n, sp)
-        return sq
+>>> def main(sp):
+...     n = get_square_dim(sp)
+...     sq = unpack(n, sp)
+...     return sq
                
 ```
 --
 ```
-    >>> sp = numpy.random.rand(3)
-    >>> print sp
-    [ 0.39333476  0.99692927  0.41525095]
+>>> sp = np.random.rand(3)
+>>> print(sp)
+[ 0.5488135   0.71518937  0.60276338]
+
 ```
 --
+
 ```
-    >>> sq = main(sp)
-    >>> print sq
-    [[ 0.39333476  0.99692927]
-     [ 0.99692927  0.41525095]]
+>>> sq = main(sp)
+>>> print(sq)
+[[ 0.5488135   0.71518937]
+ [ 0.71518937  0.60276338]]
+
 ```
 ---
 
@@ -81,12 +91,14 @@ As python programs can be potentially slow it is important to be able to identif
 Python provides a ``profile`` module for timing
 
 ```
-    >>> from profile import run
-    >>> n=10000; nn=n*(n+1)//2
+>>> from profile import run
+>>> n=10000; nn=n*(n+1)//2
+
 ```
 --
+
 ```
-    >>> run('main(numpy.random.rand(nn))')
+>>> run('main(np.random.rand(nn))') #doctest:+SKIP
              2011 function calls in 3.196 seconds
 
        Ordered by: standard name
@@ -103,7 +115,9 @@ Python provides a ``profile`` module for timing
             1    2.944    2.944    3.072    3.072 profiling.py:11(unpack)
             1    0.000    0.000    3.072    3.072 profiling.py:22(main)
             1    0.000    0.000    0.000    0.000 profiling.py:3(get_square_dim)
+
 ```
+
 ---
 
 ### analyis
@@ -186,7 +200,7 @@ Python provides a ``profile`` module for timing
 ```
 --
 ```
-    run('mainf(numpy.random.rand(nn))')
+    run('mainf(np.random.rand(nn))')
 	     8 function calls in 0.232 seconds
 
        Ordered by: standard name
@@ -221,9 +235,9 @@ Python provides a ``profile`` module for timing
 
 ```
     import timeit
-    print timeit.timeit('math.sqrt(2.0)', setup='import math')
+    print(timeit.timeit('math.sqrt(2.0)', setup='import math'))
     0.288702964783
-    print timeit.timeit('sqrt(2.0)', setup='from math import sqrt')
+    print(timeit.timeit('sqrt(2.0)', setup='from math import sqrt'))
     0.2072930336
 ```
 
@@ -237,9 +251,9 @@ Consider the script
 from time import sleep
 
 def hello():
-    print "Hello"
+    print("Hello")
     sleep(3)
-    print "Goodbye"
+    print("Goodbye")
 
 hello()
 ```
@@ -270,9 +284,9 @@ The steps are:
 ```python
 @profile
 def hello():
-    print "Hello"
+    print("Hello")
     sleep(3)
-    print "Goodbye"
+    print("Goodbye")
 ```
 --
 * Execute the script with the `kernprof` script
