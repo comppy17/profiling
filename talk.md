@@ -1,14 +1,15 @@
 <script type="text/javascript"
   src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
+
 <!--
+>>> import math
 >>> import numpy as np
 >>> np.random.seed(0)
 
 -->
-# Introduction to profiling
 
-## Olav Vahtras
+# Introduction to profiling
 
 Computational Python
 
@@ -29,13 +30,35 @@ As python programs can be potentially slow it is important to be able to identif
 * Get ``N`` from packed dimension ``N(N+1)/2``
 
 ```
->>> def get_square_dim(sp):
-...     from math import sqrt
+>>> def get_square_dim(sp, epsilon=1e-5):
+...     """
+...     Get the square dimension n for a triangularly packed array input
+...     of length n from the formula
+...          nn = n(n+1)/2 => n = -1/2 + sqrt(1/4 + 2*nn)
+...     """
 ...     nn, = sp.shape
-...     # nn = n(n+1)/2 -> n = -1/2 + sqrt(1/4 + 2*nn)
-...     n = int(round(-0.5 + sqrt(0.25 + 2*nn)))
-...     # allocate a square matrix and fill elements
-...     return n
+...     n = -0.5 + math.sqrt(0.25 + 2*nn)
+...     assert abs(n - round(n)) < epsilon, 'Input dimension is not consistent with a square packed matrix'
+... 
+...     return int(round(n))
+
+```
+
+for example
+
+* a triagonal block of a 2x2 matrix including the diagonal has size 3
+* a triagonal block of a 3x3 matrix including the diagonal has size 6
+* incompatible dimensions raise an `AssertionError`
+
+```
+>>> get_square_dim(np.zeros(3))
+2
+>>> get_square_dim(np.zeros(6))
+3
+>>> get_square_dim(np.zeros(7))                                                              #doctest: +ELLIPSIS  
+Traceback (most recent call last):
+    ...
+AssertionError: Input dimension is not consistent with a square packed matrix
 
 ```
 ---
@@ -86,19 +109,22 @@ As python programs can be potentially slow it is important to be able to identif
 ```
 ---
 
-### The ``profile`` module
+### The profiling modules
 
-Python provides a ``profile`` module for timing
+Python provides two similar modules for timing
+
+* `profile`: pure Python, some overhead
+* `cProfile`: written in C, recommended for most cases
 
 ```
->>> from profile import run
+>>> from cProfile import run
 >>> n=10000; nn=n*(n+1)//2
 
 ```
 --
 
 ```
->>> run('main(np.random.rand(nn))') #doctest:+SKIP
+>>> run('main(np.random.rand(nn))')                                                          #doctest:+SKIP
              2011 function calls in 3.196 seconds
 
        Ordered by: standard name
@@ -316,7 +342,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 ### Summary
 
-* `profile`  module  for function-level profiling your code
+* `cProfile`  module  for function-level profiling your code
 * `line_profiler` module for line-level profiling your code
 * `timeit` module for timing short code snippets
 

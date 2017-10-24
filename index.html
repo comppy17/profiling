@@ -137,12 +137,18 @@ class: center, middle, inverse
 
 ---
 
-&lt;script type=&#34;text/javascript&#34;
-  src=&#34;https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML&#34;&gt;
-&lt;/script&gt;
-# Introduction to profiling
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
 
-## Olav Vahtras
+<!--
+>>> import math
+>>> import numpy as np
+>>> np.random.seed(0)
+
+-->
+
+# Introduction to profiling
 
 Computational Python
 
@@ -163,13 +169,36 @@ As python programs can be potentially slow it is important to be able to identif
 * Get ``N`` from packed dimension ``N(N+1)/2``
 
 ```
-    def get_square_dim(sp):
-        from math import sqrt
-        nn, = sp.shape
-        # nn = n(n+1)/2 -&gt; n = -1/2 + sqrt(1/4 + 2*nn)
-        n = int(round(-0.5 + sqrt(0.25 + 2*nn)))
-        # allocate a square matrix and fill elements
-        return n
+>>> def get_square_dim(sp, epsilon=1e-5):
+...     """
+...     Get the square dimension n for a triangularly packed array input
+...     of length n from the formula
+...          nn = n(n+1)/2 => n = -1/2 + sqrt(1/4 + 2*nn)
+...     """
+...     nn, = sp.shape
+...     n = -0.5 + math.sqrt(0.25 + 2*nn)
+...     assert abs(n - round(n)) < epsilon, 'Input dimension is not consistent with a square packed matrix'
+... 
+...     return int(round(n))
+
+```
+
+for example
+
+* a triagonal block of a 2x2 matrix including the diagonal has size 3
+* a triagonal block of a 3x3 matrix including the diagonal has size 6
+* incompatible dimensions raise an `AssertionError`
+
+```
+>>> get_square_dim(np.zeros(3))
+2
+>>> get_square_dim(np.zeros(6))
+3
+>>> get_square_dim(np.zeros(7))                                                              #doctest: +ELLIPSIS  
+Traceback (most recent call last):
+    ...
+AssertionError: Input dimension is not consistent with a square packed matrix
+
 ```
 ---
 
@@ -177,16 +206,17 @@ As python programs can be potentially slow it is important to be able to identif
 
 
 ```
-    def unpack(n, sp):
-        sq = numpy.zeros((n, n))
-        ij = 0
-        for i in range(n):
-            for j in range(i):
-                sq[i, j] = sq[j, i] = sp[ij]
-                ij += 1
-            sq[i, i] = sp[ij]
-            ij += 1
-        return sq
+>>> def unpack(n, sp):
+...     sq = np.zeros((n, n))
+...     ij = 0
+...     for i in range(n):
+...         for j in range(i):
+...             sq[i, j] = sq[j, i] = sp[ij]
+...             ij += 1
+...         sq[i, i] = sp[ij]
+...         ij += 1
+...     return sq
+
 ```    
 
 ---
@@ -194,38 +224,46 @@ As python programs can be potentially slow it is important to be able to identif
 
 
 ```
-    def main(sp):
-        n = get_square_dim(sp)
-        sq = unpack(n, sp)
-        return sq
+>>> def main(sp):
+...     n = get_square_dim(sp)
+...     sq = unpack(n, sp)
+...     return sq
                
 ```
 --
 ```
-    &gt;&gt;&gt; sp = numpy.random.rand(3)
-    &gt;&gt;&gt; print sp
-    [ 0.39333476  0.99692927  0.41525095]
+>>> sp = np.random.rand(3)
+>>> print(sp)
+[ 0.5488135   0.71518937  0.60276338]
+
 ```
 --
+
 ```
-    &gt;&gt;&gt; sq = main(sp)
-    &gt;&gt;&gt; print sq
-    [[ 0.39333476  0.99692927]
-     [ 0.99692927  0.41525095]]
+>>> sq = main(sp)
+>>> print(sq)
+[[ 0.5488135   0.71518937]
+ [ 0.71518937  0.60276338]]
+
 ```
 ---
 
-### The ``profile`` module
+### The profiling modules
 
-Python provides a ``profile`` module for timing
+Python provides two similar modules for timing
+
+* `profile`: pure Python, some overhead
+* `cProfile`: written in C, recommended for most cases
 
 ```
-    &gt;&gt;&gt; from profile import run
-    &gt;&gt;&gt; n=10000; nn=n*(n+1)//2
+>>> from cProfile import run
+>>> n=10000; nn=n*(n+1)//2
+
 ```
 --
+
 ```
-    &gt;&gt;&gt; run(&#39;main(numpy.random.rand(nn))&#39;)
+>>> run('main(np.random.rand(nn))')                                                          #doctest:+SKIP
              2011 function calls in 3.196 seconds
 
        Ordered by: standard name
@@ -236,13 +274,15 @@ Python provides a ``profile`` module for timing
             1    0.004    0.004    0.004    0.004 :0(setprofile)
             1    0.000    0.000    0.000    0.000 :0(sqrt)
             1    0.040    0.040    0.040    0.040 :0(zeros)
-            1    0.008    0.008    3.192    3.192 &lt;string&gt;:1(&lt;module&gt;)
+            1    0.008    0.008    3.192    3.192 <string>:1(<module>)
             1    0.000    0.000    3.196    3.196 profile:0(main(numpy.random.rand(nn)))
             0    0.000             0.000          profile:0(profiler)
             1    2.944    2.944    3.072    3.072 profiling.py:11(unpack)
             1    0.000    0.000    3.072    3.072 profiling.py:22(main)
             1    0.000    0.000    0.000    0.000 profiling.py:3(get_square_dim)
+
 ```
+
 ---
 
 ### analyis
@@ -281,25 +321,25 @@ Python provides a ``profile`` module for timing
 ```
     $ f2py -m _unpackf unpack.F 
     Reading fortran codes...
-	    Reading file &#39;unpack.F&#39; (format:fix,strict)
+	    Reading file 'unpack.F' (format:fix,strict)
     Post-processing...
 	    Block: _unpackf
     {}
     In: :_unpackf:unpack.F:UNPACK
-    vars2fortran: No typespec for argument &#34;N&#34;.
+    vars2fortran: No typespec for argument "N".
 			    Block: UNPACK
 			    Block: MAIN
     Post-processing (stage 2)...
     Building modules...
-	    Building module &#34;_unpackf&#34;...
-		    Constructing wrapper function &#34;UNPACK&#34;...
-    getarrdims:warning: assumed shape array, using 0 instead of &#39;*&#39;
+	    Building module "_unpackf"...
+		    Constructing wrapper function "UNPACK"...
+    getarrdims:warning: assumed shape array, using 0 instead of '*'
 		      UNPACK(SP,SQ,[N])
-	    Wrote C/API module &#34;_unpackf&#34; to file &#34;./_unpackfmodule.c&#34;
+	    Wrote C/API module "_unpackf" to file "./_unpackfmodule.c"
 ```
 --
 ```
-    $ f2py -c -m _unpackf unpack.F  &gt; /dev/null
+    $ f2py -c -m _unpackf unpack.F  > /dev/null
 ```
 
 ---
@@ -325,7 +365,7 @@ Python provides a ``profile`` module for timing
 ```
 --
 ```
-    run(&#39;mainf(numpy.random.rand(nn))&#39;)
+    run('mainf(np.random.rand(nn))')
 	     8 function calls in 0.232 seconds
 
        Ordered by: standard name
@@ -335,7 +375,7 @@ Python provides a ``profile`` module for timing
 	    1    0.000    0.000    0.000    0.000 :0(round)
 	    1    0.004    0.004    0.004    0.004 :0(setprofile)
 	    1    0.000    0.000    0.000    0.000 :0(sqrt)
-	    1    0.008    0.008    0.228    0.228 &lt;string&gt;:1(&lt;module&gt;)
+	    1    0.008    0.008    0.228    0.228 <string>:1(<module>)
 	    1    0.000    0.000    0.232    0.232 profile:0(mainf(numpy.random.rand(nn)))
 	    0    0.000             0.000          profile:0(profiler)
 	    1    0.112    0.112    0.112    0.112 profiling.py:27(mainf)
@@ -360,9 +400,9 @@ Python provides a ``profile`` module for timing
 
 ```
     import timeit
-    print timeit.timeit(&#39;math.sqrt(2.0)&#39;, setup=&#39;import math&#39;)
+    print(timeit.timeit('math.sqrt(2.0)', setup='import math'))
     0.288702964783
-    print timeit.timeit(&#39;sqrt(2.0)&#39;, setup=&#39;from math import sqrt&#39;)
+    print(timeit.timeit('sqrt(2.0)', setup='from math import sqrt'))
     0.2072930336
 ```
 
@@ -376,9 +416,9 @@ Consider the script
 from time import sleep
 
 def hello():
-    print &#34;Hello&#34;
+    print("Hello")
     sleep(3)
-    print &#34;Goodbye&#34;
+    print("Goodbye")
 
 hello()
 ```
@@ -409,9 +449,9 @@ The steps are:
 ```python
 @profile
 def hello():
-    print &#34;Hello&#34;
+    print("Hello")
     sleep(3)
-    print &#34;Goodbye&#34;
+    print("Goodbye")
 ```
 --
 * Execute the script with the `kernprof` script
@@ -431,9 +471,9 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 ==============================================================
      3                                           @profile
      4                                           def hello():
-     5         1           41     41.0      0.0      print &#34;Hello&#34;
+     5         1           41     41.0      0.0      print "Hello"
      6         1      3003110 3003110.0    100.0      sleep(3)
-     7         1           68     68.0      0.0      print &#34;Goodbye&#34;
+     7         1           68     68.0      0.0      print "Goodbye"
 
 ```
 
@@ -441,7 +481,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 ### Summary
 
-* `profile`  module  for function-level profiling your code
+* `cProfile`  module  for function-level profiling your code
 * `line_profiler` module for line-level profiling your code
 * `timeit` module for timing short code snippets
 
